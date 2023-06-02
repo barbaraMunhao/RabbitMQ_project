@@ -1,0 +1,58 @@
+            #rga = re.findall(r"\d\d\d\d.\d\d\d\d.\d\d\d-\d", body)[0]
+            #name = re.split(r"\d ", body)[1]
+class HistoricServer(object):
+
+    def __init__(self, host='localhost', port=3434, pool_size=30):
+
+        self.daemon = HistoricDaemon()
+        self.pool = [] # pool threads
+        self.pool_max = pool_size
+        #TODO tratar erros na obtenção do socket
+        self.main_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        #--- RabbitMq ---#
+        #TODO add parte de conexao com rabbbit mq
+
+        #--- Start Server ---#
+        self.connect_socket(host, port)
+        self.start()
+
+    def start(self):
+        print("starting server..\n")
+
+    def connect_socket(self, host, port):
+        try:
+            self.main_socket.bind((host, port))
+            self.main_socket.listen(5)
+        except:
+
+            print("Erro ao fazer conectar com o socket")
+
+    def save(self, user, pattern):
+        cnx = HandlerDB.connect()
+        for p in pattern:
+            id = self.pattern_exist(p, cnx)
+            if id == -10: #Error
+                return -1
+            else:
+                cursor = cnx.cursor(buffered=True)
+                if id == -1: #DO not Exist
+                    try:
+
+                        query = "INSERT INTO subscribe (pattern) VALUES('{0}')".format(p)
+                        cursor.execute(query)
+                        cnx.commit()
+                        id = cursor.lastrowid
+                    except Error as e:
+                        print(e.message)
+                        return_value= -1
+                try:
+                    query = "INSERT INTO subs_user (subs_pattern_id, subscriber) VALUES ({0},{1})".format(id, user)
+                    cursor.execute(query)
+                    cnx.commit()
+                    return_value = 0
+                except Error as e:
+                    print(e.message)
+                    return_value = -1
+
+        return return_value
